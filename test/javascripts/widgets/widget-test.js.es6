@@ -1,6 +1,7 @@
 import { moduleForWidget, widgetTest } from 'helpers/widget-test';
 import { createWidget } from 'discourse/widgets/widget';
 import { withPluginApi } from 'discourse/lib/plugin-api';
+import hbs from 'discourse/widgets/hbs-compiler';
 
 moduleForWidget('base');
 
@@ -10,10 +11,7 @@ widgetTest('widget attributes are passed in via args', {
   beforeEach() {
     createWidget('hello-test', {
       tagName: 'div.test',
-
-      html(attrs) {
-        return `Hello ${attrs.name}`;
-      },
+      template: hbs`Hello {{attrs.name}}`
     });
 
     this.set('args', { name: 'Robin' });
@@ -21,6 +19,39 @@ widgetTest('widget attributes are passed in via args', {
 
   test(assert) {
     assert.equal(this.$('.test').text(), "Hello Robin");
+  }
+});
+
+widgetTest("hbs template - no tagName", {
+  template: `{{mount-widget widget="hbs-test" args=args}}`,
+
+  beforeEach() {
+    createWidget('hbs-test', {
+      template: hbs`<div class='test'>Hello {{attrs.name}}</div>`
+    });
+
+    this.set('args', { name: 'Robin' });
+  },
+
+  test(assert) {
+    assert.equal(this.$('div.test').text(), "Hello Robin");
+  }
+});
+
+widgetTest("hbs template - with tagName", {
+  template: `{{mount-widget widget="hbs-test" args=args}}`,
+
+  beforeEach() {
+    createWidget('hbs-test', {
+      tagName: 'div.test',
+      template: hbs`Hello {{attrs.name}}`
+    });
+
+    this.set('args', { name: 'Robin' });
+  },
+
+  test(assert) {
+    assert.equal(this.$('div.test').text(), "Hello Robin");
   }
 });
 
@@ -90,13 +121,10 @@ widgetTest('widget state', {
     createWidget('state-test', {
       tagName: 'button.test',
       buildKey: () => `button-test`,
+      template: hbs`{{state.clicks}} clicks`,
 
       defaultState() {
         return { clicks: 0 };
-      },
-
-      html(attrs, state) {
-        return `${state.clicks} clicks`;
       },
 
       click() {
@@ -123,10 +151,13 @@ widgetTest('widget update with promise', {
     createWidget('promise-test', {
       tagName: 'button.test',
       buildKey: () => 'promise-test',
-
-      html(attrs, state) {
-        return state.name || "No name";
-      },
+      template: hbs`
+        {{#if state.name}}
+          {{state.name}}
+        {{else}}
+          No name
+        {{/if}}
+      `,
 
       click() {
         return new Ember.RSVP.Promise(resolve => {
@@ -140,11 +171,11 @@ widgetTest('widget update with promise', {
   },
 
   test(assert) {
-    assert.equal(this.$('button.test').text(), "No name");
+    assert.equal(this.$('button.test').text().trim(), "No name");
 
     click(this.$('button'));
     andThen(() => {
-      assert.equal(this.$('button.test').text(), "Robin");
+      assert.equal(this.$('button.test').text().trim(), "Robin");
     });
   }
 });
@@ -157,9 +188,7 @@ widgetTest('widget attaching', {
 
     createWidget('attach-test', {
       tagName: 'div.container',
-      html() {
-        return this.attach('test-embedded');
-      },
+      template: hbs`{{attach widget="test-embedded"}}`
     });
   },
 
@@ -175,9 +204,7 @@ widgetTest('widget decorating', {
   beforeEach() {
     createWidget('decorate-test', {
       tagName: 'div.decorate',
-      html() {
-        return "main content";
-      },
+      template: hbs`main content`
     });
 
     withPluginApi('0.1', api => {
@@ -204,14 +231,8 @@ widgetTest('widget settings', {
   beforeEach() {
     createWidget('settings-test', {
       tagName: 'div.settings',
-
-      settings: {
-        age: 36
-      },
-
-      html() {
-        return `age is ${this.settings.age}`;
-      },
+      template: hbs`age is {{settings.age}}`,
+      settings: { age: 36 }
     });
   },
 
@@ -226,14 +247,8 @@ widgetTest('override settings', {
   beforeEach() {
     createWidget('ov-settings-test', {
       tagName: 'div.settings',
-
-      settings: {
-        age: 36
-      },
-
-      html() {
-        return `age is ${this.settings.age}`;
-      },
+      template: hbs`age is {{settings.age}}`,
+      settings: { age: 36 },
     });
 
     withPluginApi('0.1', api => {
